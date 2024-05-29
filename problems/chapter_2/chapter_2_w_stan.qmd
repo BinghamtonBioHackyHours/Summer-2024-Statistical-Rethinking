@@ -1,0 +1,130 @@
+I will use stan to model here, so that when people are beginning to use stan, they will have examples to start with. 
+
+## *Easy*
+### E1
+
+$$
+Pr(rain|Monday)
+$$
+
+But also:
+$$
+\begin{align*} 
+Pr(rain,Monday) &= Pr(rain|Monday)Pr(Monday) \\
+\\
+\frac{Pr(rain,Monday)}{Pr(Monday)} &= Pr(rain|Monda)
+\end{align*}
+$$
+
+### E2
+
+Pr(Monday|rain) = probability that it is Monday, given that it is raining.
+
+### E3
+
+1:
+$$
+Pr(Monday|rain)
+$$
+
+4: 
+$$
+\begin{align*}
+Pr(M|r) = \frac{Pr(r|M)Pr(M)}{Pr(r)}
+\end{align*}
+$$
+
+### E4
+
+I think that this means that even though there is a true proportion of water, so the probability of water is .7 doesn't have any real meaning. But we have imperfect ability to observe the true proportion of water, so this represents our belief about the proportion of water given what we have observed. 
+
+## Medium
+
+### M1
+
+See stan_models/m1.stan for the stan file
+
+```{r warning=FALSE, message=FALSE, comment=FALSE}
+# data
+data_1 <- c(1,1,1)
+data_2 <- c(1,1,1,0)
+data_3 <- c(0,1,1,0,1,1,1)
+
+# get the data into a list for stan
+dat1 <- list(N = length(data_1), water = data_1)
+dat2 <- list(N = length(data_2), water = data_2)
+dat3 <- list(N = length(data_3), water = data_3)
+
+# need to compile the stan model to C++
+library(cmdstanr)
+
+# check for syntax errors
+mod_m1 <- cmdstan_model("stan_models/m1.stan", compile = F)
+mod_m1$check_syntax()
+# if syntax is good, compile the model
+mod_m1 <- cmdstan_model("stan_models/m1.stan")
+
+
+# fit the model to the data, n.b. I only have show_messages=F because I don't want them to be shown in the
+# rendered document, I would normally want to see these.
+fit1 <- mod_m1$sample(data = dat1, chains = 4, parallel_chains = 4, show_messages = F)
+fit2 <- mod_m1$sample(data = dat2, chains = 4, parallel_chains = 4, show_messages = F)
+fit3 <- mod_m1$sample(data = dat3, chains = 4, parallel_chains = 4, show_messages = F)
+
+# plot histograms of the posterior samples of p
+hist(fit1$draws("p", format = "df")$p, xlab = "p", main = "Plausibility Water")
+hist(fit2$draws("p", format = "df")$p,  xlab = "p", main = "Plausibility Water")
+hist(fit3$draws("p", format = "df")$p,  xlab = "p", main = "Plausibility Water")
+```
+### M2
+```{r warning=FALSE, message=FALSE}
+mod_m2 <- mod_m1 <- cmdstan_model("stan_models/m2.stan", compile = F)
+mod_m2$check_syntax()
+# if syntax is good, compile the model
+mod_m2 <- cmdstan_model("stan_models/m2.stan")
+
+fit1 <- mod_m2$sample(data = dat1, chains = 4, parallel_chains = 4, show_messages = F)
+fit2 <- mod_m2$sample(data = dat2, chains = 4, parallel_chains = 4, show_messages = F)
+fit3 <- mod_m2$sample(data = dat3, chains = 4, parallel_chains = 4, show_messages = F)
+
+hist(fit1$draws("p", format = "df")$p, xlab = "p", main = "Plausibility Water")
+hist(fit2$draws("p", format = "df")$p,  xlab = "p", main = "Plausibility Water")
+hist(fit3$draws("p", format = "df")$p,  xlab = "p", main = "Plausibility Water")
+```
+### M3
+
+$$
+\begin{align*}
+\Pr(earth|land) &= \frac{Pr(land|earth)Pr(earth)}{Pr(land|earth)Pr(earth) + Pr(land|mars)Pr(mars)} \\
+\\
+&= \frac{.3\times .5}{.3\times.5 + 1\times.5} \\
+\\
+&= 0.23
+\end{align*}
+$$
+
+### M4
+
+$$
+\begin{align*}
+Pr(bb|b_{up}) &= \frac{Pr(b_{up}|BB)Pr(BB)}{Pr(b_{up}|Pr(BB))Pr(BB) + Pr(b_up|BW)Pr(BW)}\\
+\\
+&= \frac{1\times \frac{1}{3}}{1\times \frac{1}{3} + \frac{1}{2}\times \frac{1}{3}} \\
+&= \frac{2}{3}
+\end{align*}
+$$
+
+### M5
+
+Same as above but $Pr(BB) = \frac{1}{2}$ so $Pr(bb|b_{up}) = \frac{4}{5}$
+
+### M6
+
+$$
+\begin{align*}
+&= \frac{1\times\frac{1}{6}}{1\times\frac{1}{6} + \frac{1}{2}\times\frac{1}{3}} \\
+\\
+&= \frac{1}{2}
+\end{align*}
+$$
+
