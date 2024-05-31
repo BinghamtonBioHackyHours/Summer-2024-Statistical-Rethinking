@@ -1,42 +1,51 @@
-I will use stan to model here, so that when people are beginning to use stan, they will have examples to start with. 
+---
+format: typst
+---
+
+
+I will use stan to model here, so that when people are beginning to use stan, they will have examples to start with.
 
 ## *Easy*
+
 ### E1
 
 $$
 Pr(rain|Monday)
 $$
 
-But also:
-$$
+But also: 
+
 \begin{align*} 
 Pr(rain,Monday) &= Pr(rain|Monday)Pr(Monday) \\
 \\
 \frac{Pr(rain,Monday)}{Pr(Monday)} &= Pr(rain|Monda)
 \end{align*}
-$$
+
 
 ### E2
 
-Pr(Monday|rain) = probability that it is Monday, given that it is raining.
+Pr(Monday\|rain) = probability that it is Monday, given that it is raining.
 
 ### E3
 
-1:
+1: 
+
 $$
 Pr(Monday|rain)
 $$
 
 4: 
+
 $$
 \begin{align*}
 Pr(M|r) = \frac{Pr(r|M)Pr(M)}{Pr(r)}
 \end{align*}
 $$
 
+
 ### E4
 
-I think that this means that even though there is a true proportion of water, so the probability of water is .7 doesn't have any real meaning. But we have imperfect ability to observe the true proportion of water, so this represents our belief about the proportion of water given what we have observed. 
+I think that this means that even though there is a true proportion of water, so the probability of water is .7 doesn't have any real meaning. But we have imperfect ability to observe the true proportion of water, so this represents our belief about the proportion of water given what we have observed.
 
 ## Medium
 
@@ -76,7 +85,9 @@ hist(fit1$draws("p", format = "df")$p, xlab = "p", main = "Plausibility Water")
 hist(fit2$draws("p", format = "df")$p,  xlab = "p", main = "Plausibility Water")
 hist(fit3$draws("p", format = "df")$p,  xlab = "p", main = "Plausibility Water")
 ```
+
 ### M2
+
 ```{r warning=FALSE, message=FALSE}
 mod_m2 <- mod_m1 <- cmdstan_model("stan_models/m2.stan", compile = F)
 mod_m2$check_syntax()
@@ -91,6 +102,7 @@ hist(fit1$draws("p", format = "df")$p, xlab = "p", main = "Plausibility Water")
 hist(fit2$draws("p", format = "df")$p,  xlab = "p", main = "Plausibility Water")
 hist(fit3$draws("p", format = "df")$p,  xlab = "p", main = "Plausibility Water")
 ```
+
 ### M3
 
 $$
@@ -103,6 +115,7 @@ $$
 \end{align*}
 $$
 
+
 ### M4
 
 $$
@@ -113,6 +126,7 @@ Pr(bb|b_{up}) &= \frac{Pr(b_{up}|BB)Pr(BB)}{Pr(b_{up}|Pr(BB))Pr(BB) + Pr(b_up|BW
 &= \frac{2}{3}
 \end{align*}
 $$
+
 
 ### M5
 
@@ -128,3 +142,54 @@ $$
 \end{align*}
 $$
 
+### M7
+
+$$
+\begin{align*}
+Pr(bb|b\space then\space w) &= \frac{Pr(b\space then\space w|bb)Pr(bb)}{Pr(b\space then\space w|bb)Pr(bb) + Pr(b\space then\space w|bw)Pr(bw)} \\
+\\
+&= \frac{(1\times \frac{3}{4}) \frac{1}{3}}{(1\times \frac{3}{4}) \frac{1}{3} + (\frac{1}{2}\times\frac{1}{2})\frac{1}{3}} \\
+\\
+&= \frac{3}{4}
+\end{align*}
+$$
+
+
+### H1
+
+$$
+\begin{align*}
+Pr(A|twin_1) &= \frac{Pr(twin_1|A)Pr(A)}{Pr(twin_1|A)Pr(A)+Pr(twin_1|B)Pr(B)} \\
+\\
+&= \frac{.1\times.5}{.1\times.5 + .2\times.5} = \frac{1}{3}\\
+\\
+Pr(B|twin_1) &= \frac{Pr(twin_1|A)Pr(A)}{Pr(twin_1|A)Pr(A)+Pr(twin_1|B)Pr(B)}\\
+\\
+&= \frac{.2\times.5}{.2\times.5 + .1\times.5} = \frac{2}{3} \\
+\\
+Pr(twin_2|twin_1) &= Pr(A|twin_1)Pr(twin_2|A) + Pr(B|twin_1)Pr(twin_2|B)\\
+\\
+&= \frac{1}{3}.1 + \frac{2}{3}.2 = \frac{1}{6}
+\\
+\end{align*}
+$$
+
+
+```{r}
+twins_sim <- function(){
+  # simulate 10000 individuals from either species with prob = .5 A = 1, B = 0
+  species <- rbinom(1e5, 1, .5)
+  # simulate probability of first set being twins (1) given the species
+  first_twins <- rbinom(1e5, 1, prob = ifelse(species==1, .1, .2))
+  # simulate second twins
+  second_twins <- rbinom(1e5, 1, ifelse(species == 1, .1, .2))
+  # calculate the probability of second twins if the first set was twins
+  sum(first_twins==1 & second_twins==1)/sum(first_twins==1)
+}
+
+hist(replicate(100, twins_sim()), main = "Simulations of second twins given first twins",
+     xlab = "Proportion Second Twins given First Twins")
+abline(v = 1/6, col = "white", lwd = 6)
+abline(v = 1/6, col = "blue", lwd = 3)
+
+```
