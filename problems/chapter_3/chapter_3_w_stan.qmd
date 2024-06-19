@@ -185,11 +185,41 @@ p <- fit$draws("p", format = "df")$p
 
 plot(density(p))
 ```
+
+
 #### H2
 
 ```{r}
 HPDI(p, c(50,89,97))
 ```
 
+#### H3
 
+```{r}
+reps <- rbinom(1e4, 200, prob = sample(p, 1e4, replace = T))
+
+hist(reps)
+abline(v = sum(birth1 + birth2), col = "red", lwd = 3)
+```
+
+#### H4
+
+```{r}
+reps <- rbinom(1e4, 100, prob = sample(p, 1e4, replace = T))
+hist(reps)
+abline(v = sum(birth1), col = "red", lwd = 3)
+```
+
+#### H5
+
+```{r}
+girl_first <- sum(birth1==0)
+
+reps <- rbinom(1e4, girl_first, prob = sample(p, 1e4, replace = T))
+
+girl_boy <- sum(birth1==0 & birth2==1)
+hist(reps)
+abline(v = girl_boy, col = "red", lwd = 3)
+
+```
 
