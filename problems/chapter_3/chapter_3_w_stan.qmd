@@ -183,14 +183,26 @@ fit <- mod$sample(
 
 p <- fit$draws("p", format = "df")$p
 
-plot(density(p))
+plot(density(p), xlim = c(0,1))
+
 ```
 
 
 #### H2
 
 ```{r}
-HPDI(p, c(50,89,97))
+
+p_grid <- seq(0,1, l = 1000)
+
+lik <- dbinom(sum(c(birth1 + birth2)), length(c(birth1, birth2)), prob = p_grid)
+post <- lik*rep(1,length(p_grid))
+post <- post/sum(post)
+
+samps <- sample(p_grid, 1e4, replace = T, prob = post)
+dens(samps, xlim = c(0,1))
+
+HPDI(samps, prob = c(.5, .89, .97))
+HPDI(p, c(.50,.89,.97))
 ```
 
 #### H3
