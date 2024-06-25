@@ -1,0 +1,301 @@
+---
+format: typst
+---
+
+
+
+### Easy
+
+
+
+```{r}
+p_grid <- seq(0,1, l = 1000)
+prior <- rep(1,1000)
+likelihood <- dbinom(6, 9, p_grid)
+posterior <- likelihood*prior
+posterior <- posterior/sum(posterior)
+set.seed(100)
+samples <- sample(p_grid, prob = posterior, size = 1e4, 
+                  replace = T)
+
+```
+
+
+
+
+#### E1
+
+
+
+```{r}
+sum(samples<.2)/1e4
+```
+
+
+
+#### E2
+
+
+
+```{r}
+sum(samples>.8)/1e4
+```
+
+
+
+#### E3
+
+
+
+```{r}
+sum(samples > .2 & samples < .8)/1e4
+```
+
+
+
+#### E4
+
+
+
+```{r}
+quantile(samples, .2)
+```
+
+
+
+#### E5
+
+
+
+```{r}
+quantile(samples, .8)
+```
+
+
+#### E6
+
+
+
+```{r message=FALSE}
+library(rethinking)
+HPDI(samples, .66)
+```
+
+
+
+#### E7
+
+
+
+```{r}
+quantile(samples, c(.17, .83))
+```
+
+
+
+### Medium
+
+I will use stan to do this instead of of a grid approximation so that anyone who wants to can see how the stan model works. Look in the "stan_models" folder to see the model.
+
+#### M1
+
+
+
+```{r message=FALSE, warning=FALSE}
+library(cmdstanr)
+library(rethinking)
+# make the model but don't compile until checking the syntax
+mod <- cmdstan_model("stan_models/c3m1.stan", compile = F)
+# check the syntax
+mod$check_syntax()
+# syntax is good now compile the model
+mod <- cmdstan_model("stan_models/c3m1.stan")
+
+# put the data into a list
+dat <- list(
+  N = 1, 
+  y = 8,
+  n = 15
+)
+
+# fit the model
+fit <- mod$sample(
+  data = dat,
+  chains = 4,
+  parallel_chains = 4,
+  show_messages = F
+)
+
+# extract the posterior samples for p (probability of water)
+p <- fit$draws("p", format = "df")$p
+
+# plot the approximate posterior density
+plot(density(p), lwd = 3, main = "Posterior of the Probability of water",
+     xlab = "Proportion Water")
+```
+
+
+
+#### M2
+
+p in the code block above is 4000 samples from the posterior, so I'll just resample from them. This really isn't necessary since those samples already represent the posterior, but just for fun.
+
+
+```{r}
+# sample from the posterior
+post_samp <- sample(p, 1e4, replace = T)
+
+# show them both just to see it's the same. 
+HPDI(post_samp, .9)
+HPDI(p)
+```
+
+
+#### M3
+
+Draw a y for every value of p in the data, then we can look at the probability of getting 15.
+
+
+
+```{r}
+sum(rbinom(4000, 15, p)==8)/4000
+```
+
+
+#### M4
+
+
+
+```{r}
+sum(rbinom(4000, 9, p)==6)/4000
+```
+
+
+#### M5
+
+
+
+```{r message=FALSE, warning=FALSE}
+# make the model but don't compile until checking the syntax
+mod <- cmdstan_model("stan_models/c3m5.stan", compile = F)
+# check the syntax
+mod$check_syntax()
+# syntax is good now compile the model
+mod <- cmdstan_model("stan_models/c3m5.stan")
+
+fit <- mod$sample(
+  data = dat,
+  chains = 4,
+  parallel_chains = 4,
+  show_messages = F
+)
+
+# extract the posterior samples for p (probability of water)
+p <- fit$draws("p", format = "df")$p
+
+plot(density(p), lwd = 3)
+
+# sample from the posterior
+post_samp <- sample(p, 1e4, replace = T)
+
+# show them both just to see it's the same. 
+HPDI(post_samp)
+HPDI(p)
+
+sum(rbinom(4000, 15, p)==8)/4000
+
+sum(rbinom(4000, 9, p)==6)/4000
+```
+
+
+### Hard
+
+
+
+```{r}
+data(homeworkch3)
+sum(birth1 + birth2)
+```
+
+
+
+I'll use the same stan model as for M1 above, it should work.
+
+
+
+```{r warning=FALSE, message=FALSE}
+mod <- cmdstan_model("stan_models/c3m1.stan")
+
+# put the data into a list
+dat <- list(
+  N = 1, 
+  y = sum(c(birth1, birth2)),
+  n = length(c(birth1, birth2))
+)
+
+# fit the model
+fit <- mod$sample(
+  data = dat,
+  chains = 4,
+  parallel_chains = 4,
+  show_messages = F
+)
+
+p <- fit$draws("p", format = "df")$p
+
+plot(density(p))
+```
+
+
+
+
+#### H2
+
+
+
+```{r}
+HPDI(p, c(50,89,97))
+```
+
+
+
+#### H3
+
+
+
+```{r}
+reps <- rbinom(1e4, 200, prob = sample(p, 1e4, replace = T))
+
+hist(reps)
+abline(v = sum(birth1 + birth2), col = "red", lwd = 3)
+```
+
+
+
+#### H4
+
+
+
+```{r}
+reps <- rbinom(1e4, 100, prob = sample(p, 1e4, replace = T))
+hist(reps)
+abline(v = sum(birth1), col = "red", lwd = 3)
+```
+
+
+
+#### H5
+
+
+
+```{r}
+girl_first <- sum(birth1==0)
+
+reps <- rbinom(1e4, girl_first, prob = sample(p, 1e4, replace = T))
+
+girl_boy <- sum(birth1==0 & birth2==1)
+hist(reps)
+abline(v = girl_boy, col = "red", lwd = 3)
+
+```
+

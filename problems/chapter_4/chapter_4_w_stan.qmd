@@ -1,0 +1,33 @@
+---
+format: typst
+---
+
+### Easy
+
+#### E1
+
+$y_i \sim Normal(\mu, \sigma)$ is the likelihood.
+
+#### E2
+
+There are two parameters: $\mu$ and $\sigma$.
+
+#### E3
+
+$$
+\begin{align*}
+[\mu,\sigma|y] \propto &\prod_i^nNormal(y_i|\mu,\sigma)\times\\
+&Normal(\mu|0,10)\times\\
+&Uniform(\sigma|0,10)
+\end{align*}
+$$
+
+#### E4
+
+$\mu_i = \alpha + \beta x_i$ is the linear model.
+
+#### E5
+
+There are 3 parameters: $\alpha$, $\beta$, and $\sigma$.
+
+### Medium
