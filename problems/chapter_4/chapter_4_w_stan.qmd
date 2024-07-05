@@ -157,16 +157,21 @@ library(cmdstanr)
 library(tidyverse)
 data(Howell1)
 d <- Howell1
+
+# function for standardizing
 stn <- function(x) (x - mean(x))/sd(x)
 
+# data into a list for stan
 dat <- list(
   N = nrow(d),
   weight = stn(d$weight),
   height = stn(d$height)
 )
 
+# compile the model
 mod <- cmdstan_model("stan_models/height_mod.stan")
 
+# fit the model to the data
 fit_h1 <- mod$sample(
   data = dat,
   chains = 4,
@@ -174,19 +179,24 @@ fit_h1 <- mod$sample(
   show_messages = F
 )
 
+# extract the parameteres
 alpha <- fit_h1$draws("a", format = "df")$a
 beta <- fit_h1$draws("b", format = "df")$b
 sigma <- fit_h1$draws("sigma", format = "df")$sigma
 
+# make a vector of the observed weights and convert them to the standardized scale
 weight_obs <- c(46.95, 43.72, 64.78, 32.59, 54.63)
 obs_stn <- (weight_obs - mean(d$weight))/sd(d$weight)
 
+# posterior predictive distribution for the new observed weights
 height_pred_stn <- sapply(obs_stn, function(x) rnorm(length(alpha), alpha + beta * x, sigma))
 
+# convert to un-standardized values and get into a dataframe
 height_pred <- height_pred_stn * sd(d$height) + mean(d$height)
 height_pred <- data.frame(height_pred)
 colnames(height_pred) <- weight_obs
 
+# print the values
 height_pred %>% 
   pivot_longer(1:5, names_to = "weight",
                values_to = "height_pred") %>% 
@@ -203,15 +213,18 @@ height_pred %>%
 #### H2
 
 ```{r message=FALSE, warning=FALSE}
+# filtered data set so that all are lower than 18 years
 d_young <- d %>% 
   filter(age < 18)
 
+# data list for stan
 dat <- list(
   N = nrow(d_young),
   weight = stn(d_young$weight),
   height = stn(d_young$height)
 )
 
+# fit the model to the data
 fit <- mod$sample(
   data = dat,
   chains = 4,
@@ -226,28 +239,33 @@ fit <- mod$sample(
 I'm gonna cheat and show 1 unit change (standardized) cause I don't want to do the work to convert at the moment.
 
 ```{r}
+# posterior mean of the slope
 mean(fit$draws("b", format = "df")$b)
 ```
 
 ##### b
 
 ```{r}
-# means
+# extract the intercept and slope
 a <- fit$draws("a", format = "df")$a
 b <- fit$draws("b", format = "df")$b
 
+# calculate the means and convert it back from standardized units
 means <- sapply(stn(d_young$weight), function(x) a + b * x) * sd(d_young$height) + mean(d_young$height)
 
+# get the mean of the means and the hpdi interval
 mu_means <- apply(means, 2, mean)
 upr_means <- apply(means, 2, function(x) HPDI(x, .89)[2])
 lwr_means <- apply(means, 2, function(x) HPDI(x, .89)[1])
 
-# predictid values
+# extract the posterior predicted values
 y_pred <- fit$draws("y_pred", format = "df")[,1:nrow(d_young)] * sd(d_young$height) + mean(d_young$height)
 
+# calculate the hpdi for the posterior predictive distribution
 upr_pred <- apply(y_pred, 2, function(x) HPDI(x, .89)[2])
 lwr_pred <- apply(y_pred, 2, function(x) HPDI(x, .89)[1])
 
+# plot the data and the fit model
 data.frame(weight = d_young$weight, height = d_young$height, mu_means, upr_means, 
            lwr_means, upr_pred, lwr_pred) %>% 
   ggplot(aes(x = weight, y = height)) +
@@ -260,4 +278,71 @@ data.frame(weight = d_young$weight, height = d_young$height, mu_means, upr_means
   theme_classic()
 
 ```
+
+##### c
+
+This doesn't seem to be a very good fit, especially at low and high values of weight. Data aren't evenly distributed around the expectation. This might be because these data points are at the early stage of growth where the relationship between weight and height is changing. Maybe including a term for age would help.
+
+#### H3
+
+##### a
+```{r message=FALSE, warning=FALSE}
+
+# data into a list for stan
+dat <- list(
+  N = nrow(d),
+  log_weight = log(d$weight),
+  height = d$height
+)
+
+# compile the model
+mod <- cmdstan_model("stan_models/log_weight.stan")
+
+# fit the model
+fit <- mod$sample(
+  data = dat,
+  chains = 4,
+  parallel_chains = 4,
+  show_messages = F
+)
+
+# print the ouput
+fit$print(c("a","b","sigma"))
+```
+
+Since the predictor is on the log scale, and I don't think in log units, it is difficult to interpret the output. The intercept is about -24, i.e. when log of weight = 0, height would be negative, so there is no biological interpretation of the intercept. The slope is about 47, so one unit change in log weight corresponds to a 47 cm change in height.
+
+##### b
+
+```{r}
+# extract the intercept and slope from the fit
+a <- fit$draws("a", format = "df")$a
+b <- fit$draws("b", format = "df")$b
+
+# calculate the predicted means and hpdi for the means
+means <- sapply(log(d$weight), function(x) a + b * x)
+mu_means <- apply(means, 2, mean)
+upr_means <- apply(means, 2, function(x) HPDI(x)[2])
+lwr_means <- apply(means, 2, function(x) HPDI(x)[1])
+
+# extract the posterior predictive simulations
+y_pred <- fit$draws("y_pred", format = "df")[,1:nrow(d)]
+
+upr_pred <- apply(y_pred, 2, function(x) HPDI(x)[2])
+lwr_pred <- apply(y_pred, 2, function(x) HPDI(x)[1])
+
+# plot
+data.frame(height = d$height, weight = d$weight, mu_means, 
+           upr_means, lwr_means, upr_pred, lwr_pred) %>% 
+  ggplot(aes(x = weight, y = height)) +
+  geom_point(color = "lightblue") +
+  geom_line(aes(x = weight, y = mu_means)) +
+  geom_ribbon(aes(x = weight, ymax = upr_means, ymin = lwr_means),
+              color = "grey", alpha = .75) +
+  geom_ribbon(aes(x = weight, ymax = upr_pred, ymin = lwr_pred),
+              color = "grey", alpha = .25) +
+  theme_classic()
+ 
+```
+
 
