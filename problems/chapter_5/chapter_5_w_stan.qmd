@@ -195,3 +195,81 @@ $$
 $$
 obesity = \alpha + \beta_{gas}GasPrice + \beta_{exercise}ExerciseTime
 $$
+
+### Hard
+
+Make a stan file to fit all these so it is general.
+
+```{r message=FALSE, warning=FALSE}
+lin_mod <- cmdstan_model("stan_models/linear_mod.stan")
+```
+
+#### H1
+
+```{r}
+data(foxes)
+
+# area size model
+X <- matrix(c(rep(1, nrow(foxes)), stn(foxes$area)), ncol = 2)
+
+dat_area <- list(
+  N = nrow(foxes),
+  K = ncol(X),
+  y = stn(foxes$weight),
+  X = X
+)
+
+fit_area <- lin_mod$sample(
+  data = dat_area,
+  chains = 4,
+  parallel_chains = 4,
+  show_messages = F
+)
+
+mcmc_intervals(fit_area$draws("beta"))
+
+X <- matrix(c(rep(1, nrow(foxes)), stn(foxes$groupsize)), ncol = 2)
+
+dat_group <- list(
+  N = nrow(foxes),
+  K = ncol(X),
+  y = stn(foxes$weight),
+  X = X
+)
+
+fit_group <- lin_mod$sample(
+  data = dat_group,
+  chains = 4,
+  parallel_chains = 4,
+  show_messages = F
+)
+
+mcmc_intervals(fit_group$draws("beta"))
+
+
+
+
+```
+
+#### H2
+
+```{r}
+X <- matrix(c(rep(1, nrow(foxes)), stn(foxes$area),stn(foxes$groupsize)), ncol = 3)
+
+dat_both <- list(
+  N = nrow(foxes),
+  K = ncol(X),
+  y = stn(foxes$weight),
+  X = X
+)
+
+fit_both <- lin_mod$sample(
+  data = dat_both,
+  chains = 4,
+  parallel_chains = 4,
+  show_messages = F
+)
+
+mcmc_intervals(fit_both$draws("beta"))
+```
+
